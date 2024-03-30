@@ -107,20 +107,14 @@ fun MainScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
-                    .run {
-                        if (imageUri == Uri.EMPTY) {
-                            then(
-                                Modifier
-                                    .background(Color.Gray)
-                                    .clickable {
-                                        pickMedia.launch(
-                                            PickVisualMediaRequest(
-                                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                                            )
-                                        )
-                                    })
-                        } else this
-                    },
+                    .background(Color.Gray)
+                    .clickable {
+                        pickMedia.launch(
+                            PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                    }
             ) {
                 if (imageUri == Uri.EMPTY) {
                     Icon(
@@ -150,10 +144,12 @@ fun MainScreen(
                 }
             }
 
-            when (uiState) {
-                is MainUiState.Success -> Text(uiState.outputText)
-                is MainUiState.Error -> Text(uiState.errorMessage)
-                else -> Unit
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                when (uiState) {
+                    is MainUiState.Success -> Text(uiState.outputText)
+                    is MainUiState.Error -> Text(uiState.errorMessage)
+                    else -> Unit
+                }
             }
         }
     }
