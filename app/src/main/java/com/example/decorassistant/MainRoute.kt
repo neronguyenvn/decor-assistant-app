@@ -6,8 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,12 +19,15 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -41,6 +42,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import coil.size.Precision
+import com.example.decorassistant.ui.component.MyModalBottomSheet
+import com.example.decorassistant.util.ComposeFileProvider
 import kotlinx.coroutines.launch
 
 @Composable
@@ -53,9 +56,7 @@ fun MainRoute(
     val imageRequestBuilder = ImageRequest.Builder(LocalContext.current)
     val imageLoader = ImageLoader.Builder(LocalContext.current).build()
 
-    MainScreen(
-        uiState = uiState
-    ) { selectedImage ->
+    MainScreen(uiState = uiState) { selectedImage ->
         coroutineScope.launch {
             val bitmap = selectedImage.let {
                 val imageRequest = imageRequestBuilder
@@ -79,19 +80,11 @@ fun MainRoute(
 }
 
 @Composable
-fun MainScreen(
+private fun MainScreen(
     uiState: MainUiState,
     onSuggestClick: (Uri) -> Unit
 ) {
     var imageUri by rememberSaveable { mutableStateOf(Uri.EMPTY) }
-
-    val pickMedia = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        uri?.let {
-            imageUri = it
-        }
-    }
 
     Scaffold { paddingValues ->
         Column(
@@ -102,32 +95,9 @@ fun MainScreen(
                 .padding(vertical = 16.dp)
         ) {
             Text("Select a picture of your interior design")
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .background(Color.Gray)
-                    .clickable {
-                        pickMedia.launch(
-                            PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
-                    }
-            ) {
-                if (imageUri == Uri.EMPTY) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = ""
-                    )
-                } else {
-                    AsyncImage(
-                        model = imageUri,
-                        contentDescription = "",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+
+            ImageSelectUi(imageUri = imageUri) {
+                imageUri = it
             }
 
             Button(
@@ -152,5 +122,74 @@ fun MainScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ImageSelectUi(
+    imageUri: Uri,
+    changeImageUri: (Uri) -> Unit
+) {
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var tempUri by remember { mutableStateOf(Uri.EMPTY) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            uri?.let { changeImageUri(uri) }
+        }
+    )
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            if (success) changeImageUri(tempUri)
+        }
+    )
+
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        onClick = { showBottomSheet = true },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            if (imageUri == Uri.EMPTY) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = ""
+                )
+            } else {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = "",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+
+    if (showBottomSheet) {
+        MyModalBottomSheet(
+            onDismiss = {
+                showBottomSheet = false
+            },
+            onTakePhotoClick = {
+                showBottomSheet = false
+                tempUri = ComposeFileProvider.getImageUri(context)
+                cameraLauncher.launch(tempUri)
+            },
+            onPhotoGalleryClick = {
+                showBottomSheet = false
+                imagePicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+        )
     }
 }
