@@ -6,14 +6,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
@@ -34,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -87,38 +92,48 @@ private fun MainScreen(
     var imageUri by rememberSaveable { mutableStateOf(Uri.EMPTY) }
 
     Scaffold { paddingValues ->
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier
-                .padding(paddingValues)
-                .padding(vertical = 16.dp)
+        LazyColumn(
+            contentPadding = PaddingValues(vertical = 16.dp),
+            modifier = Modifier.padding(paddingValues)
         ) {
-            Text("Select a picture of your interior design")
+            item {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text("Select a picture of your interior design")
 
-            ImageSelectUi(imageUri = imageUri) {
-                imageUri = it
-            }
+                    ImageSelectUi(imageUri = imageUri) {
+                        imageUri = it
+                    }
 
-            Button(
-                onClick = { onSuggestClick(imageUri) },
-                modifier = Modifier.animateContentSize(),
-            ) {
-                if (uiState == MainUiState.Loading) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
-                    Text(text = "Give me suggestions")
+                    Button(
+                        onClick = { onSuggestClick(imageUri) },
+                        modifier = Modifier.animateContentSize(),
+                    ) {
+                        if (uiState == MainUiState.Loading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Text(text = "Give me suggestions")
+                        }
+                    }
+
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        when (uiState) {
+                            is MainUiState.Success -> Text(uiState.outputText)
+                            is MainUiState.Error -> Text(uiState.errorMessage)
+                            else -> Unit
+                        }
+                    }
                 }
             }
 
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                when (uiState) {
-                    is MainUiState.Success -> Text(uiState.outputText)
-                    is MainUiState.Error -> Text(uiState.errorMessage)
-                    else -> Unit
+            if (uiState is MainUiState.Success) {
+                items(uiState.outputImages) { image ->
+                    Image(bitmap = image.asImageBitmap(), contentDescription = "")
                 }
             }
         }
